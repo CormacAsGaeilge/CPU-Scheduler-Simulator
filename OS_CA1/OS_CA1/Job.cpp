@@ -22,3 +22,23 @@ std::string Job::getName() const
 {
 	return name;
 }
+
+void Job::setEndTime(int endTime)
+{
+	Job::endTime = endTime;
+}
+
+int Job::getArrivalTime() const
+{
+	return arrivalTime;
+}
+
+void Job::decrementTime()
+{
+	timeRemaining--;
+}
+
+int Job::getTimeRemaining() const
+{
+	return timeRemaining;
+}

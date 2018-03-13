@@ -10,8 +10,13 @@ public:
 	Scheduler();
 	Scheduler(std::string fileName); //needed to parse file
 	~Scheduler();
+
+	void run();
+	void tick();
 	void readJobsFromFile(std::string fileUrl);
 	void reverseScheduled();
+	void startJob();
+	void finishJob();
 
 private:
 	int globalRunTime, currentTime;

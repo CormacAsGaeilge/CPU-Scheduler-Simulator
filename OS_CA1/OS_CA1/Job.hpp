@@ -8,6 +8,11 @@ public:
 	~Job();
 
 	std::string getName() const;
+	void setEndTime(int endTime);
+	int getArrivalTime() const;
+	void decrementTime();
+	int getTimeRemaining() const;
+
 private:
 	std::string name;
 	int arrivalTime, runTime, timeRemaining, endTime;

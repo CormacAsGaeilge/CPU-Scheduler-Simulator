@@ -12,7 +12,6 @@ Scheduler::Scheduler()
 Scheduler::Scheduler(std::string fileName) : Scheduler()
 {
 	readJobsFromFile(fileName);
-	std::cout << scheduledJobs.top().getName() + " TEST";
 }
 
 
@@ -70,3 +69,61 @@ void Scheduler::reverseScheduled()
 	}
 	scheduledJobs = reversed;
 }
+
+void Scheduler::run()
+{
+	while (currentTime <= globalRunTime) {
+		tick(); //call tick function
+		currentTime++; //increment 'time'
+	}
+}
+
+void Scheduler::tick()
+{
+	//FIFO
+	if (!scheduledJobs.empty()) {
+		if (runningJobs.empty()) { //if no running jobs
+			//start new process
+			startJob();
+		}
+	}
+
+	if (!runningJobs.empty()) {
+		//decrement time remaining on top item in running queue
+		runningJobs.top().decrementTime();
+		std::cout << currentTime << "\t" << runningJobs.top().getName() << std::endl;
+		if (runningJobs.top().getTimeRemaining() == 0) {
+			//end process
+			finishJob();
+		}
+	}
+
+
+	//SJF
+
+
+	//STCF
+
+
+	//RR1
+
+
+	//RR1
+
+}
+
+void Scheduler::startJob()
+{
+	//move Job from scheduled to running
+	runningJobs.push(scheduledJobs.top());
+	scheduledJobs.pop();
+}
+
+void Scheduler::finishJob()
+{
+	//move Job from running to finished
+	finishedJobs.push(runningJobs.top());
+	runningJobs.pop();
+	finishedJobs.top().setEndTime(currentTime);
+}
+
