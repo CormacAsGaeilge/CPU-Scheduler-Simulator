@@ -12,6 +12,7 @@ Scheduler::Scheduler()
 Scheduler::Scheduler(std::string fileName) : Scheduler()
 {
 	readJobsFromFile(fileName);
+	std::cout << scheduledJobs.top().getName() + " TEST";
 }
 
 
@@ -41,18 +42,18 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 				i++;
 			}
 
-
 			std::string name;
 			int arrivalTime, runTime;
 
-			name = words[0];
-			arrivalTime = std::stoi(words[1]);
+			if (words[0] != " " && words[1] != " ") {
+				name = words[0];
+				arrivalTime = std::stoi(words[1]);
+				runTime = std::stoi(line);
 
-			runTime = std::stoi(line);
-
-			Job job = Job(name, arrivalTime, runTime);
-			scheduledJobs.push(job);
-			globalRunTime += std::stoi(line);
+				Job job = Job(name, arrivalTime, runTime);
+				scheduledJobs.push(job);
+				globalRunTime += std::stoi(line);
+			}
 		}
 		jobFile.close();
 	}

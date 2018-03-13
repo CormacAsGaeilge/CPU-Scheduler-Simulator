@@ -17,3 +17,8 @@ Job::Job(std::string name, int arrivalTime, int runTime)
 Job::~Job()
 {
 }
+
+std::string Job::getName() const
+{
+	return name;
+}

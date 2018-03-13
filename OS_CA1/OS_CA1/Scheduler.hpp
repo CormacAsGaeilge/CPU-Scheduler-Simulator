@@ -2,6 +2,7 @@
 #include "Job.hpp"
 #include <stack>
 #include <fstream>
+#include <iostream>
 
 class Scheduler
 {
