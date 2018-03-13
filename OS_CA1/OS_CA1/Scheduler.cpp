@@ -55,6 +55,18 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 				globalRunTime += std::stoi(line);
 			}
 		}
+		reverseScheduled(); //flip the stack
 		jobFile.close();
 	}
+}
+
+void Scheduler::reverseScheduled()
+{
+	//flips the stack - not very efficient, might switch to queues in the future
+	std::stack<Job> reversed;
+	while (!scheduledJobs.empty()) {
+		reversed.push(scheduledJobs.top());
+		scheduledJobs.pop();
+	}
+	scheduledJobs = reversed;
 }

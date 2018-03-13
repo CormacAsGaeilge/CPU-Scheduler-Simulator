@@ -11,6 +11,7 @@ public:
 	Scheduler(std::string fileName); //needed to parse file
 	~Scheduler();
 	void readJobsFromFile(std::string fileUrl);
+	void reverseScheduled();
 
 private:
 	int globalRunTime, currentTime;
