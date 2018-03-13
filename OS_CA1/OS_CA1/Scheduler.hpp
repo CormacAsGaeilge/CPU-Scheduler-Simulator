@@ -1,6 +1,7 @@
 #pragma once
 #include "Job.hpp"
 #include <stack>
+#include <fstream>
 
 class Scheduler
 {
