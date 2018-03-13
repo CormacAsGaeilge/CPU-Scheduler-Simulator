@@ -12,6 +12,8 @@ int main() {
 	Scheduler s = Scheduler();
 	//s.run(); //startup scheduler
 
+	Job j = Job("Test", 1, 10); //Name is test, arrival time is 1, run time is 10
+
 	getchar(); //pause output
 	return 0;
 }
