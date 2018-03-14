@@ -29,6 +29,7 @@ public:
 	void finishJob(SchedulerType type);
 	void printOutput();
 	std::stack<Job> sortSJF(std::stack<Job> stack);
+	std::stack<Job> orderRunningByTimeRemaining(std::stack<Job> stack);
 
 private:
 	int globalRunTime, currentTime;
@@ -38,6 +39,9 @@ private:
 		fifoFinishedJobs,
 		sjfScheduledJobs,
 		sjfRunningJobs,
-		sjfFinishedJobs;
+		sjfFinishedJobs,
+		stcfScheduledJobs,
+		stcfRunningJobs,
+		stcfFinishedJobs;
 };
 
