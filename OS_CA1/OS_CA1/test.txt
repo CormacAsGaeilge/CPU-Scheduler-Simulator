@@ -1,8 +1,8 @@
-word 1 2
-adobe 5 7
-chrome 5 5
-mail 5 4
-sts 20 8
-eclipse 20 5
-autoCAD 15 10
-sketchup 20 10
+a 1 2
+b 5 7
+c 5 5
+d 5 4
+e 20 8
+f 20 5
+g 45 10
+h 50 10

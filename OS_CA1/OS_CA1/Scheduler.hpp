@@ -30,9 +30,10 @@ public:
 	void printOutput();
 	std::stack<Job> sortSJF(std::stack<Job> stack);
 	std::stack<Job> orderRunningByTimeRemaining(std::stack<Job> stack);
+	std::stack<Job> roundRobinTimeShare(int start, int split, std::stack<Job> stack);
 
 private:
-	int globalRunTime, currentTime;
+	int globalRunTime, currentTime, rr1Start, rr2Start, rr1Split = 1, rr2Split = 5;
 	std::stack<Job> scheduledJobs, //for storing jobs
 		fifoScheduledJobs,
 		fifoRunningJobs,
@@ -42,6 +43,9 @@ private:
 		sjfFinishedJobs,
 		stcfScheduledJobs,
 		stcfRunningJobs,
-		stcfFinishedJobs;
+		stcfFinishedJobs,
+		rr1ScheduledJobs,
+		rr1RunningJobs,
+		rr1FinishedJobs;
 };
 

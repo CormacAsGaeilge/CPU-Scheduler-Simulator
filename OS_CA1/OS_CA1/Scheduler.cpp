@@ -56,6 +56,8 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 
 				Job job = Job(name, arrivalTime, runTime);
 				temp.push(job);
+				if (arrivalTime > globalRunTime) //if the global run time at this point is further on than the accum runtime then push forward the runtime
+					globalRunTime = arrivalTime;
 				globalRunTime += std::stoi(line);
 			}
 		}
@@ -67,6 +69,7 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 	fifoScheduledJobs = scheduledJobs;			//FIFO - Make no changes, basic FIFO implementation
 	sjfScheduledJobs = sortSJF(scheduledJobs);	//SJF  - sorted by shortest time and arrival time 
 	stcfScheduledJobs = sortSJF(scheduledJobs);	//STCF - inital sort the same as SJF 
+	rr1ScheduledJobs = sortSJF(scheduledJobs);	//RR1 - inital sort the same as SJF 
 }
 
 std::stack<Job> Scheduler::reverseScheduled(std::stack<Job> stack)
@@ -82,15 +85,30 @@ std::stack<Job> Scheduler::reverseScheduled(std::stack<Job> stack)
 
 void Scheduler::run()
 {
-	std::cout << "T\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
+	std::cout << "T\t\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
 	while (currentTime <= globalRunTime) {
 		tick(); //call tick function
 		currentTime++; //increment 'time'
 	}
+	std::cout << "= SIMULATION COMPLETE" << std::endl;
 }
 
 void Scheduler::tick()
 {
+	//determine if a scheduled job has arrived
+	if (!scheduledJobs.empty()) {
+		if (scheduledJobs.size() > 1) {
+			while (scheduledJobs.top().getArrivalTime() == currentTime) {
+				std::cout << "* ARRIVED: " << scheduledJobs.top().getName() << std::endl;
+				scheduledJobs.pop();
+			}
+		}
+		else if (scheduledJobs.top().getArrivalTime() == currentTime) {
+			std::cout << "* ARRIVED: " << scheduledJobs.top().getName() << std::endl;
+			scheduledJobs.pop();
+		}
+	}
+
 	//FIFO
 	if (!fifoRunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
@@ -124,6 +142,7 @@ void Scheduler::tick()
 				startJob(SJF);											//start new process
 		}
 	}
+
 	//STCF
 	if (!stcfRunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
@@ -143,9 +162,25 @@ void Scheduler::tick()
 
 
 	//RR1
+	if (!rr1RunningJobs.empty()) {
+		//decrement time remaining on top item in running queue
+		rr1RunningJobs.top().decrementTime();
+		if (rr1RunningJobs.top().getTimeRemaining() == 0) {
+			finishJob(RR1);//end process
+		}
+	}
 
+	if (!rr1ScheduledJobs.empty()) {										//unlike SJF, allow a job to start even if others are running
+		if (currentTime >= rr1ScheduledJobs.top().getArrivalTime()) {		//only if it matches scheduled time
+			startJob(RR1);		
+			if (rr1RunningJobs.size() > 1)
+				rr1RunningJobs = orderRunningByTimeRemaining(stcfRunningJobs);	//shuffle running jobs so the shortest time to completion Job is first
+		}
+		if (rr1RunningJobs.size() > 1)
+			rr1RunningJobs = roundRobinTimeShare(rr1Start, rr1Split, rr1RunningJobs);	//reorder round robin if needed
+	}
 
-	//RR1
+	//RR2
 
 
 	printOutput();
@@ -158,14 +193,22 @@ void Scheduler::startJob(SchedulerType type)
 	case FIFO:
 		fifoRunningJobs.push(fifoScheduledJobs.top());
 		fifoScheduledJobs.pop();
+		std::cout << "? STARTED:\t" + fifoRunningJobs.top().getName() << std::endl;
 		break;
 	case SJF:
 		sjfRunningJobs.push(sjfScheduledJobs.top());
 		sjfScheduledJobs.pop();
+		std::cout << "? STARTED:\t\t" + sjfRunningJobs.top().getName() << std::endl;
 		break;
 	case STCF:
 		stcfRunningJobs.push(stcfScheduledJobs.top());
 		stcfScheduledJobs.pop();
+		std::cout << "? STARTED:\t\t\t" + stcfRunningJobs.top().getName() << std::endl;
+		break;
+	case RR1:
+		rr1RunningJobs.push(rr1ScheduledJobs.top());
+		rr1ScheduledJobs.pop();
+		std::cout << "? STARTED:\t\t\t\t" + rr1RunningJobs.top().getName() << std::endl;
 		break;
 	}
 	
@@ -179,16 +222,26 @@ void Scheduler::finishJob(SchedulerType type)
 		fifoFinishedJobs.push(fifoRunningJobs.top());
 		fifoRunningJobs.pop();
 		fifoFinishedJobs.top().setEndTime(currentTime);
+		std::cout << "* COMPLETE:\t" + fifoFinishedJobs.top().getName() << std::endl;
 		break;
 	case SJF:
 		sjfFinishedJobs.push(sjfRunningJobs.top());
 		sjfRunningJobs.pop();
 		sjfFinishedJobs.top().setEndTime(currentTime);
+		std::cout << "* COMPLETE:\t\t" + sjfFinishedJobs.top().getName() << std::endl;
 		break;
 	case STCF:
 		stcfFinishedJobs.push(stcfRunningJobs.top());
 		stcfRunningJobs.pop();
 		stcfFinishedJobs.top().setEndTime(currentTime);
+		std::cout << "* COMPLETE:\t\t\t" + stcfFinishedJobs.top().getName() << std::endl;
+		break;
+	case RR1:
+		rr1FinishedJobs.push(rr1RunningJobs.top());
+		rr1RunningJobs.pop();
+		rr1FinishedJobs.top().setEndTime(currentTime);
+		rr1Start = currentTime;
+		std::cout << "* COMPLETE:\t\t\t\t" + rr1FinishedJobs.top().getName() << std::endl;
 		break;
 	}
 }
@@ -208,12 +261,19 @@ void Scheduler::printOutput()
 	else
 		sjfJob = "NA";
 	//STCF
-	if (!sjfRunningJobs.empty())
+	if (!stcfRunningJobs.empty())
 		stcfJob = stcfRunningJobs.top().getName().substr(0, 4);
 	else
 		stcfJob = "NA";
+	//RR1
+	if (!rr1RunningJobs.empty())
+		rr1Job = rr1RunningJobs.top().getName().substr(0, 4);
+	else
+		rr1Job = "NA";
 
-	outputString = "\t" + fifoJob + "\t" + sjfJob + "\t" + stcfJob;
+	rr2Job = "NA";
+
+	outputString = "\t\t" + fifoJob + "\t" + sjfJob + "\t" + stcfJob + "\t" + rr1Job + "\t" + rr2Job;
 
 	std::cout << currentTime << outputString << std::endl;
 }
@@ -263,4 +323,28 @@ std::stack<Job> Scheduler::orderRunningByTimeRemaining(std::stack<Job> stack)
 	}
 
 	return reverseScheduled(returnStack); //flip the stack as it's in the wrong order
+}
+
+std::stack<Job> Scheduler::roundRobinTimeShare( int start, int split, std::stack<Job> stack)
+{
+	if ((currentTime - start) % split == 0) { //only run whenever timesplit needs to be incremented
+		std::vector<Job> tempJobs;
+		std::stack<Job> returnStack;
+		while (!stack.empty()) {
+			tempJobs.push_back(stack.top());
+			stack.pop();
+		}
+
+		std::rotate(tempJobs.begin(),
+		tempJobs.end() - 1, // this will be the new first element
+		tempJobs.end());
+
+		for (int i = 0; i < tempJobs.size(); i++) {
+			returnStack.push(tempJobs.at(i));
+		}
+
+		return reverseScheduled(returnStack);
+	}
+	else //don't change anything, change isn't needed
+		return stack;
 }
