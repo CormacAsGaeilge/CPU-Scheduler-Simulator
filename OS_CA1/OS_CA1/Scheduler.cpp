@@ -2,8 +2,12 @@
 
 Scheduler::Scheduler()
 	: scheduledJobs()
-	, runningJobs()
-	, finishedJobs()
+	, fifoScheduledJobs()
+	, sjfScheduledJobs()
+	, fifoRunningJobs()
+	, fifoFinishedJobs()
+	, sjfRunningJobs()
+	, sjfFinishedJobs()
 	, currentTime(0)
 {
 	readJobsFromFile("test.txt"); //use test.txt if not specified
@@ -57,6 +61,10 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 		reverseScheduled(); //flip the stack
 		jobFile.close();
 	}
+
+	//copy scheduledJobs everywhere
+	fifoScheduledJobs = scheduledJobs;
+	sjfScheduledJobs = scheduledJobs;
 }
 
 void Scheduler::reverseScheduled()
@@ -72,6 +80,7 @@ void Scheduler::reverseScheduled()
 
 void Scheduler::run()
 {
+	std::cout << "T\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
 	while (currentTime <= globalRunTime) {
 		tick(); //call tick function
 		currentTime++; //increment 'time'
@@ -81,27 +90,41 @@ void Scheduler::run()
 void Scheduler::tick()
 {
 	//FIFO
-	if (!scheduledJobs.empty()) {
-		if (runningJobs.empty()) { //if no running jobs
-			//start new process
-			startJob();
+	if (!fifoRunningJobs.empty()) {
+		//decrement time remaining on top item in running queue
+		fifoRunningJobs.top().decrementTime();
+		if (fifoRunningJobs.top().getTimeRemaining() == 0) {
+			//end process
+			finishJob(FIFO);
 		}
 	}
 
-	if (!runningJobs.empty()) {
-		//decrement time remaining on top item in running queue
-		runningJobs.top().decrementTime();
-		std::cout << currentTime << "\t" << runningJobs.top().getName() << std::endl;
-		if (runningJobs.top().getTimeRemaining() == 0) {
-			//end process
-			finishJob();
+	if (!fifoScheduledJobs.empty()) {
+		if (fifoRunningJobs.empty()) { //if no running jobs
+									   //start new process
+			startJob(FIFO);
 		}
 	}
 
 
 	//SJF
+	if (!sjfRunningJobs.empty()) {
+		//decrement time remaining on top item in running queue
+		sjfRunningJobs.top().decrementTime();
+		if (sjfRunningJobs.top().getTimeRemaining() == 0) {
+			//end process
+			finishJob(SJF);
+		}
+	}
 
+	//SORT
 
+	if (!sjfScheduledJobs.empty()) {
+		if (sjfRunningJobs.empty()) { //if no running jobs
+									  //start new process
+			startJob(SJF);
+		}
+	}
 	//STCF
 
 
@@ -110,20 +133,53 @@ void Scheduler::tick()
 
 	//RR1
 
+
+	printOutput();
 }
 
-void Scheduler::startJob()
+void Scheduler::startJob(SchedulerType type)
 {
 	//move Job from scheduled to running
-	runningJobs.push(scheduledJobs.top());
-	scheduledJobs.pop();
+	switch (type) {
+	case FIFO:
+		fifoRunningJobs.push(fifoScheduledJobs.top());
+		fifoScheduledJobs.pop();
+		break;
+	case SJF:
+		break;
+	}
+	
 }
 
-void Scheduler::finishJob()
+void Scheduler::finishJob(SchedulerType type)
 {
 	//move Job from running to finished
-	finishedJobs.push(runningJobs.top());
-	runningJobs.pop();
-	finishedJobs.top().setEndTime(currentTime);
+	switch (type) {
+	case FIFO:
+		fifoFinishedJobs.push(fifoRunningJobs.top());
+		fifoRunningJobs.pop();
+		fifoFinishedJobs.top().setEndTime(currentTime);
+		break;
+	case SJF:
+		break;
+	}
 }
 
+void Scheduler::printOutput()
+{
+	std::string outputString, fifoJob, sjfJob, stcfJob, rr1Job, rr2Job;
+
+	if (!fifoRunningJobs.empty()) //job running
+		fifoJob = fifoRunningJobs.top().getName().substr(0,4);
+	else 
+		fifoJob = "NA";
+
+	if (!sjfRunningJobs.empty())
+		sjfJob = sjfRunningJobs.top().getName();
+	else
+		sjfJob = "NA";
+
+	outputString = "\t" + fifoJob + "\t" + sjfJob;
+
+	std::cout << currentTime << outputString << std::endl;
+}
