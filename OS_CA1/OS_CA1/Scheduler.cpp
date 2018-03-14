@@ -25,6 +25,7 @@ Scheduler::~Scheduler()
 
 void Scheduler::readJobsFromFile(std::string fileUrl)
 {
+	std::stack<Job> temp;
 	//parse jobs from file, format
 	std::string line, delimiter = " ", jobName;
 	int startTime, runTime;
@@ -54,28 +55,28 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 				runTime = std::stoi(line);
 
 				Job job = Job(name, arrivalTime, runTime);
-				scheduledJobs.push(job);
+				temp.push(job);
 				globalRunTime += std::stoi(line);
 			}
 		}
-		reverseScheduled(); //flip the stack
 		jobFile.close();
 	}
 
+	scheduledJobs = reverseScheduled(temp); //reverse stack 
 	//copy scheduledJobs everywhere
 	fifoScheduledJobs = scheduledJobs;
-	sjfScheduledJobs = scheduledJobs;
+	sjfScheduledJobs = sortSJF(scheduledJobs);	//sorted by shortest time and arrival time 
 }
 
-void Scheduler::reverseScheduled()
+std::stack<Job> Scheduler::reverseScheduled(std::stack<Job> stack)
 {
 	//flips the stack - not very efficient, might switch to queues in the future
 	std::stack<Job> reversed;
-	while (!scheduledJobs.empty()) {
-		reversed.push(scheduledJobs.top());
-		scheduledJobs.pop();
+	while (!stack.empty()) {
+		reversed.push(stack.top());
+		stack.pop();
 	}
-	scheduledJobs = reversed;
+	return reversed;
 }
 
 void Scheduler::run()
@@ -100,29 +101,26 @@ void Scheduler::tick()
 	}
 
 	if (!fifoScheduledJobs.empty()) {
-		if (fifoRunningJobs.empty()) { //if no running jobs
-									   //start new process
-			startJob(FIFO);
+		if (fifoRunningJobs.empty()) {										//if no running jobs, otherwise wait til process is finished  
+			if (currentTime >= fifoScheduledJobs.top().getArrivalTime())	//only if it matches or surpasses scheduled time
+				startJob(FIFO);												//start new process
 		}
 	}
 
+	//SJF - sorted by shortest time and arrival time 
 
-	//SJF
 	if (!sjfRunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
 		sjfRunningJobs.top().decrementTime();
 		if (sjfRunningJobs.top().getTimeRemaining() == 0) {
-			//end process
-			finishJob(SJF);
+			finishJob(SJF);//end process
 		}
 	}
 
-	//SORT
-
 	if (!sjfScheduledJobs.empty()) {
-		if (sjfRunningJobs.empty()) { //if no running jobs
-									  //start new process
-			startJob(SJF);
+		if (sjfRunningJobs.empty())	{									//if no running jobs
+			if (currentTime >= sjfScheduledJobs.top().getArrivalTime()) //only if it matches or surpasses scheduled time
+				startJob(SJF);											//start new process
 		}
 	}
 	//STCF
@@ -146,6 +144,8 @@ void Scheduler::startJob(SchedulerType type)
 		fifoScheduledJobs.pop();
 		break;
 	case SJF:
+		sjfRunningJobs.push(sjfScheduledJobs.top());
+		sjfScheduledJobs.pop();
 		break;
 	}
 	
@@ -161,6 +161,9 @@ void Scheduler::finishJob(SchedulerType type)
 		fifoFinishedJobs.top().setEndTime(currentTime);
 		break;
 	case SJF:
+		sjfFinishedJobs.push(sjfRunningJobs.top());
+		sjfRunningJobs.pop();
+		sjfFinishedJobs.top().setEndTime(currentTime);
 		break;
 	}
 }
@@ -175,11 +178,37 @@ void Scheduler::printOutput()
 		fifoJob = "NA";
 
 	if (!sjfRunningJobs.empty())
-		sjfJob = sjfRunningJobs.top().getName();
+		sjfJob = sjfRunningJobs.top().getName().substr(0, 4);
 	else
 		sjfJob = "NA";
 
 	outputString = "\t" + fifoJob + "\t" + sjfJob;
 
 	std::cout << currentTime << outputString << std::endl;
+}
+
+std::stack<Job> Scheduler::sortSJF(std::stack<Job> stack)
+{
+	std::vector<Job> tempJobs;
+	std::stack<Job> returnStack;
+	while (!stack.empty()) {
+		tempJobs.push_back(stack.top());
+		stack.pop();
+	}
+
+	std::sort(tempJobs.begin(), tempJobs.end(), [](const Job& lhs, const Job& rhs)
+	{ //orders list by arrival time and if processes are scheduled at the same time then it orders those jobs by time remaining on those jobs
+		if (lhs.getArrivalTime() == rhs.getArrivalTime()) {
+			return lhs.getTimeRemaining() < rhs.getTimeRemaining();
+		}
+		else {
+			return lhs.getArrivalTime() < rhs.getArrivalTime();
+		}
+	});
+
+	for (int i = 0; i < tempJobs.size(); i++) {
+		returnStack.push(tempJobs.at(i));
+	}
+
+	return reverseScheduled(returnStack); //flip the stack as it's in the wrong order
 }

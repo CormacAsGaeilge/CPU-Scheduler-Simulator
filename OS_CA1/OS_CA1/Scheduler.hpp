@@ -3,6 +3,8 @@
 #include <stack>
 #include <fstream>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 enum SchedulerType {
 	FIFO,
@@ -22,10 +24,11 @@ public:
 	void run();
 	void tick();
 	void readJobsFromFile(std::string fileUrl);
-	void reverseScheduled();
+	std::stack<Job> reverseScheduled(std::stack<Job> stack);
 	void startJob(SchedulerType type);
 	void finishJob(SchedulerType type);
 	void printOutput();
+	std::stack<Job> sortSJF(std::stack<Job> stack);
 
 private:
 	int globalRunTime, currentTime;
