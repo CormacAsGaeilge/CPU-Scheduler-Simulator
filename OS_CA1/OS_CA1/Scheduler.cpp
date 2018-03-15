@@ -70,6 +70,7 @@ void Scheduler::readJobsFromFile(std::string fileUrl)
 	sjfScheduledJobs = sortSJF(scheduledJobs);	//SJF  - sorted by shortest time and arrival time 
 	stcfScheduledJobs = sortSJF(scheduledJobs);	//STCF - inital sort the same as SJF 
 	rr1ScheduledJobs = sortSJF(scheduledJobs);	//RR1 - inital sort the same as SJF 
+	rr2ScheduledJobs = sortSJF(scheduledJobs);	//RR2 - inital sort the same as SJF 
 }
 
 std::stack<Job> Scheduler::reverseScheduled(std::stack<Job> stack)
@@ -109,6 +110,17 @@ void Scheduler::tick()
 		}
 	}
 
+	fifoTick();
+	sjfTick();
+	stcfTick();
+	rr1Tick();
+	rr2Tick();
+
+	printOutput();
+}
+
+void Scheduler::fifoTick()
+{
 	//FIFO
 	if (!fifoRunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
@@ -125,7 +137,10 @@ void Scheduler::tick()
 				startJob(FIFO);												//start new process
 		}
 	}
+}
 
+void Scheduler::sjfTick()
+{
 	//SJF - sorted by shortest time and arrival time 
 
 	if (!sjfRunningJobs.empty()) {
@@ -137,12 +152,15 @@ void Scheduler::tick()
 	}
 
 	if (!sjfScheduledJobs.empty()) {
-		if (sjfRunningJobs.empty())	{									//if no running jobs
+		if (sjfRunningJobs.empty()) {									//if no running jobs
 			if (currentTime >= sjfScheduledJobs.top().getArrivalTime()) //only if it matches or surpasses scheduled time
 				startJob(SJF);											//start new process
 		}
 	}
+}
 
+void Scheduler::stcfTick()
+{
 	//STCF
 	if (!stcfRunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
@@ -159,8 +177,10 @@ void Scheduler::tick()
 				stcfRunningJobs = orderRunningByTimeRemaining(stcfRunningJobs);	//shuffle running jobs so the shortest time to completion Job is first
 		}
 	}
+}
 
-
+void Scheduler::rr1Tick()
+{
 	//RR1
 	if (!rr1RunningJobs.empty()) {
 		//decrement time remaining on top item in running queue
@@ -172,18 +192,35 @@ void Scheduler::tick()
 
 	if (!rr1ScheduledJobs.empty()) {										//unlike SJF, allow a job to start even if others are running
 		if (currentTime >= rr1ScheduledJobs.top().getArrivalTime()) {		//only if it matches scheduled time
-			startJob(RR1);		
+			startJob(RR1);
 			if (rr1RunningJobs.size() > 1)
-				rr1RunningJobs = orderRunningByTimeRemaining(stcfRunningJobs);	//shuffle running jobs so the shortest time to completion Job is first
+				rr1RunningJobs = orderRunningByTimeRemaining(rr1RunningJobs);	//shuffle running jobs so the shortest time to completion Job is first
 		}
 		if (rr1RunningJobs.size() > 1)
 			rr1RunningJobs = roundRobinTimeShare(rr1Start, rr1Split, rr1RunningJobs);	//reorder round robin if needed
 	}
+}
 
+void Scheduler::rr2Tick()
+{
 	//RR2
+	if (!rr2RunningJobs.empty()) {
+		//decrement time remaining on top item in running queue
+		rr2RunningJobs.top().decrementTime();
+		if (rr2RunningJobs.top().getTimeRemaining() == 0) {
+			finishJob(RR2);//end process
+		}
+	}
 
-
-	printOutput();
+	if (!rr2ScheduledJobs.empty()) {										//unlike SJF, allow a job to start even if others are running
+		if (currentTime >= rr2ScheduledJobs.top().getArrivalTime()) {		//only if it matches scheduled time
+			startJob(RR2);
+			if (rr2RunningJobs.size() > 1)
+				rr2RunningJobs = orderRunningByTimeRemaining(rr2RunningJobs);	//shuffle running jobs so the shortest time to completion Job is first
+		}
+		if (rr2RunningJobs.size() > 1)
+			rr2RunningJobs = roundRobinTimeShare(rr2Start, rr2Split, rr2RunningJobs);	//reorder round robin if needed
+	}
 }
 
 void Scheduler::startJob(SchedulerType type)
@@ -193,22 +230,32 @@ void Scheduler::startJob(SchedulerType type)
 	case FIFO:
 		fifoRunningJobs.push(fifoScheduledJobs.top());
 		fifoScheduledJobs.pop();
+		fifoRunningJobs.top().setStartTime(currentTime);
 		std::cout << "? STARTED:\t" + fifoRunningJobs.top().getName() << std::endl;
 		break;
 	case SJF:
 		sjfRunningJobs.push(sjfScheduledJobs.top());
 		sjfScheduledJobs.pop();
+		sjfRunningJobs.top().setStartTime(currentTime);
 		std::cout << "? STARTED:\t\t" + sjfRunningJobs.top().getName() << std::endl;
 		break;
 	case STCF:
 		stcfRunningJobs.push(stcfScheduledJobs.top());
 		stcfScheduledJobs.pop();
+		stcfRunningJobs.top().setStartTime(currentTime);
 		std::cout << "? STARTED:\t\t\t" + stcfRunningJobs.top().getName() << std::endl;
 		break;
 	case RR1:
 		rr1RunningJobs.push(rr1ScheduledJobs.top());
 		rr1ScheduledJobs.pop();
+		rr1RunningJobs.top().setStartTime(currentTime);
 		std::cout << "? STARTED:\t\t\t\t" + rr1RunningJobs.top().getName() << std::endl;
+		break;
+	case RR2:
+		rr2RunningJobs.push(rr2ScheduledJobs.top());
+		rr2ScheduledJobs.pop();
+		rr2RunningJobs.top().setStartTime(currentTime);
+		std::cout << "? STARTED:\t\t\t\t\t" + rr2RunningJobs.top().getName() << std::endl;
 		break;
 	}
 	
@@ -243,6 +290,13 @@ void Scheduler::finishJob(SchedulerType type)
 		rr1Start = currentTime;
 		std::cout << "* COMPLETE:\t\t\t\t" + rr1FinishedJobs.top().getName() << std::endl;
 		break;
+	case RR2:
+		rr2FinishedJobs.push(rr2RunningJobs.top());
+		rr2RunningJobs.pop();
+		rr2FinishedJobs.top().setEndTime(currentTime);
+		rr2Start = currentTime;
+		std::cout << "* COMPLETE:\t\t\t\t\t" + rr2FinishedJobs.top().getName() << std::endl;
+		break;
 	}
 }
 
@@ -270,8 +324,11 @@ void Scheduler::printOutput()
 		rr1Job = rr1RunningJobs.top().getName().substr(0, 4);
 	else
 		rr1Job = "NA";
-
-	rr2Job = "NA";
+	//RR2
+	if (!rr2RunningJobs.empty())
+		rr2Job = rr2RunningJobs.top().getName().substr(0, 4);
+	else
+		rr2Job = "NA";
 
 	outputString = "\t\t" + fifoJob + "\t" + sjfJob + "\t" + stcfJob + "\t" + rr1Job + "\t" + rr2Job;
 
@@ -347,4 +404,49 @@ std::stack<Job> Scheduler::roundRobinTimeShare( int start, int split, std::stack
 	}
 	else //don't change anything, change isn't needed
 		return stack;
+}
+
+void Scheduler::analise()
+{
+	std::cout << "#\tJOB\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
+	perJobStats();
+	std::cout << "= INDIVIDUAL STATS COMPLETE" << std::endl;
+}
+
+void Scheduler::perJobStats()
+{
+	std::vector<Job> fifoJobs = sortJobs(fifoFinishedJobs);
+	std::vector<Job> sjfJobs = sortJobs(sjfFinishedJobs);
+	std::vector<Job> stcfJobs = sortJobs(stcfFinishedJobs);
+	std::vector<Job> rr1Jobs = sortJobs(rr1FinishedJobs);
+	std::vector<Job> rr2Jobs = sortJobs(rr2FinishedJobs);
+
+	for (int i = 0; i < fifoJobs.size(); i++) {
+		std::cout << "T\t" << fifoJobs[i].getName() << "\t" << fifoJobs[i].getTurnAroundTime() << "\t" << sjfJobs[i].getTurnAroundTime() << "\t" << stcfJobs[i].getTurnAroundTime() << "\t" << rr1Jobs[i].getTurnAroundTime() << "\t" << rr2Jobs[i].getTurnAroundTime() << std::endl;
+	}
+
+	for (int i = 0; i < fifoJobs.size(); i++) {
+		std::cout << "R\t" << fifoJobs[i].getName() << "\t" << fifoJobs[i].getResponseTime() << "\t" << sjfJobs[i].getResponseTime() << "\t" << stcfJobs[i].getResponseTime() << "\t" << rr1Jobs[i].getResponseTime() << "\t" << rr2Jobs[i].getResponseTime() << std::endl;
+	}
+}
+
+void Scheduler::aggregateStates()
+{
+}
+
+std::vector<Job> Scheduler::sortJobs(std::stack<Job> jobs)
+{
+	std::vector<Job> tempJobs;
+	std::stack<Job> returnStack;
+	while (!jobs.empty()) {
+		tempJobs.push_back(jobs.top());
+		jobs.pop();
+	}
+
+	std::sort(tempJobs.begin(), tempJobs.end(), [](const Job& lhs, const Job& rhs)
+	{
+		return lhs.getName() < rhs.getName();
+	});
+
+	return tempJobs;
 }

@@ -9,12 +9,14 @@ public:
 
 	std::string getName() const;
 	void setEndTime(int endTime);
+	void setStartTime(int startTime);
 	int getArrivalTime() const;
 	void decrementTime();
 	int getTimeRemaining() const;
-
+	float getTurnAroundTime();
+	float getResponseTime();
 private:
 	std::string name;
-	int arrivalTime, runTime, timeRemaining, endTime;
+	int arrivalTime, runTime, timeRemaining, startTime, endTime;
 };
 
