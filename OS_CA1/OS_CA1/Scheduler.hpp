@@ -37,9 +37,11 @@ public:
 	std::stack<Job> orderRunningByTimeRemaining(std::stack<Job> stack);
 	std::stack<Job> roundRobinTimeShare(int start, int split, std::stack<Job> stack);
 	void analise();
-	void perJobStats();
-	void aggregateStates();
+	void perJobStats(std::vector<Job> fifoJobs, std::vector<Job> sjfJobs, std::vector<Job> stcfJobs, std::vector<Job> rr1Jobs, std::vector<Job> rr2Jobs);
+	void aggregateStats(std::vector<Job> fifoJobs, std::vector<Job> sjfJobs, std::vector<Job> stcfJobs, std::vector<Job> rr1Jobs, std::vector<Job> rr2Jobs);
 	std::vector<Job> sortJobs(std::stack<Job> jobs);
+	float averageTurnAround(std::vector<Job> jobs);
+	float averageResponse(std::vector<Job> jobs);
 private:
 	int globalRunTime, currentTime, rr1Start, rr2Start, rr1Split = 1, rr2Split = 5;
 	std::stack<Job> scheduledJobs, //for storing jobs

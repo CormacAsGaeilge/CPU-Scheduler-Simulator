@@ -408,19 +408,23 @@ std::stack<Job> Scheduler::roundRobinTimeShare( int start, int split, std::stack
 
 void Scheduler::analise()
 {
-	std::cout << "#\tJOB\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
-	perJobStats();
-	std::cout << "= INDIVIDUAL STATS COMPLETE" << std::endl;
-}
-
-void Scheduler::perJobStats()
-{
 	std::vector<Job> fifoJobs = sortJobs(fifoFinishedJobs);
 	std::vector<Job> sjfJobs = sortJobs(sjfFinishedJobs);
 	std::vector<Job> stcfJobs = sortJobs(stcfFinishedJobs);
 	std::vector<Job> rr1Jobs = sortJobs(rr1FinishedJobs);
 	std::vector<Job> rr2Jobs = sortJobs(rr2FinishedJobs);
 
+	std::cout << "#\tJOB\tFIFO\tSJF\tSTCF\tRR1\tRR2" << std::endl;
+	perJobStats(fifoJobs, sjfJobs, stcfJobs, rr1Jobs, rr2Jobs);
+	std::cout << "= INDIVIDUAL STATS COMPLETE" << std::endl;
+
+	std::cout << "# SCHEDULER\tAVG_TURNAROUND\tAVG_RESPONSE" << std::endl;
+	aggregateStats(fifoJobs, sjfJobs, stcfJobs, rr1Jobs, rr2Jobs);
+	std::cout << "= AGGREGATE STATS COMPLETE" << std::endl;
+}
+
+void Scheduler::perJobStats(std::vector<Job> fifoJobs, std::vector<Job> sjfJobs, std::vector<Job> stcfJobs, std::vector<Job> rr1Jobs, std::vector<Job> rr2Jobs)
+{
 	for (int i = 0; i < fifoJobs.size(); i++) {
 		std::cout << "T\t" << fifoJobs[i].getName() << "\t" << fifoJobs[i].getTurnAroundTime() << "\t" << sjfJobs[i].getTurnAroundTime() << "\t" << stcfJobs[i].getTurnAroundTime() << "\t" << rr1Jobs[i].getTurnAroundTime() << "\t" << rr2Jobs[i].getTurnAroundTime() << std::endl;
 	}
@@ -430,8 +434,13 @@ void Scheduler::perJobStats()
 	}
 }
 
-void Scheduler::aggregateStates()
+void Scheduler::aggregateStats(std::vector<Job> fifoJobs, std::vector<Job> sjfJobs, std::vector<Job> stcfJobs, std::vector<Job> rr1Jobs, std::vector<Job> rr2Jobs)
 {
+	std::cout << "@ FIFO\t\t" << averageTurnAround(fifoJobs) << "\t\t" << averageResponse(fifoJobs) << std::endl;
+	std::cout << "@ SJF\t\t" << averageTurnAround(sjfJobs) << "\t\t" << averageResponse(sjfJobs) << std::endl;
+	std::cout << "@ STCF\t\t" << averageTurnAround(stcfJobs) << "\t\t" << averageResponse(stcfJobs) << std::endl;
+	std::cout << "@ RR1\t\t" << averageTurnAround(rr1Jobs) << "\t\t" << averageResponse(rr1Jobs) << std::endl;
+	std::cout << "@ RR2\t\t" << averageTurnAround(rr2Jobs) << "\t\t" << averageResponse(rr2Jobs) << std::endl;
 }
 
 std::vector<Job> Scheduler::sortJobs(std::stack<Job> jobs)
@@ -449,4 +458,20 @@ std::vector<Job> Scheduler::sortJobs(std::stack<Job> jobs)
 	});
 
 	return tempJobs;
+}
+
+float Scheduler::averageTurnAround(std::vector<Job> jobs)
+{
+	float avg = 0;
+	for (int i = 0; i < jobs.size(); i++) 
+		avg += jobs[i].getTurnAroundTime();
+	return avg/jobs.size();
+}
+
+float Scheduler::averageResponse(std::vector<Job> jobs)
+{
+	float avg = 0;
+	for (int i = 0; i < jobs.size(); i++) 
+		avg += jobs[i].getResponseTime();
+	return avg / jobs.size();
 }
